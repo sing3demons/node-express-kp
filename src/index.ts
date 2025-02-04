@@ -1,4 +1,4 @@
-import express, { type Request, type Response, type NextFunction } from 'express'
+import express, { type Request, type Response, type NextFunction, type Application } from 'express'
 import {
   CtxSchema,
   HttpMethod,
@@ -260,7 +260,7 @@ export default class AppServer extends AppRouter {
     return contest
   }
 
-  public register() {
+  public register(): Application {
     this._routes.forEach(({ method, path, handler, hook }) => {
       this.instance.route(path)[method](async (req: Request, res: Response, next: NextFunction) => {
         const ctx = this.createContext(req, res)

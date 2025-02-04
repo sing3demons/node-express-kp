@@ -1,5 +1,5 @@
 import { Server } from 'http'
-import AppServer, { Router } from './serve'
+import AppServer, { Router } from '.'
 import express from 'express'
 import { Socket } from 'net'
 import { Type } from '@sinclair/typebox'

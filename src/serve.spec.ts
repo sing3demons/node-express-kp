@@ -1,5 +1,5 @@
 import supertest from 'supertest'
-import AppServer, { HandlerSchema, Router } from './serve'
+import AppServer, { HandlerSchema, Router } from '.'
 import { Type } from '@sinclair/typebox'
 
 describe('Server test', () => {

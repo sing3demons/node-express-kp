@@ -9,10 +9,9 @@
     "module": "ESNext",
     "rootDir": "./src",
     "moduleResolution": "node",
+    "allowJs": true,
     "strict": true,
-    "sourceMap": true,
-    "sourceRoot": "/",
-    "declarationMap": false,
+    "declaration": true,
     "skipLibCheck": true,
     "alwaysStrict": true,
     "strictNullChecks": true,
@@ -24,5 +23,6 @@
     "noUnusedParameters": true,
     "typeRoots": ["src/typings", "./node_modules/@types/"]
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "exclude": ["**/*.spec.ts", "**/*.test.ts"]
 }

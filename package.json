@@ -1,14 +1,27 @@
 {
-  "name": "node-express-kp",
+  "name": "@sing3demons/node-express-kp",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "type": "module",
+  "main": "lib/index.js",
+  "module": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
     "test": "jest",
-    "build": "tsc"
+    "build": "rm -rf lib && tsc"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.ts"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sing3demons/express-zod.git"
+  },
+  "publishConfig": {
+    "@sing3demons:registry": "https://npm.pkg.github.com/"
   },
   "keywords": [],
-  "author": "",
+  "author": "sing3demons",
   "license": "ISC",
   "dependencies": {
     "@sinclair/typebox": "^0.34.15",
