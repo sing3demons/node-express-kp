@@ -36,6 +36,7 @@ import {
   ServerKafkaOptions,
   TSchemaCtx,
   IServerKafka,
+  ServerKafkaError,
 } from './kafka'
 
 export {
@@ -85,6 +86,7 @@ export {
   ConsumeHandler,
   MessageHandler,
   IServerKafka,
+  ServerKafkaError,
 }
 
 export default AppServer
