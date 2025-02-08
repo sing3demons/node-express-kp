@@ -5,7 +5,7 @@ on:
     branches:
       - main
     tags:
-      - release-v.*
+      - *.*.*
 
 jobs:
   build:
