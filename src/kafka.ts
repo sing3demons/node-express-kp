@@ -104,7 +104,17 @@ export type TSchemaCtx<BodySchema extends TSchema, HeaderSchema extends TSchema>
   beforeHandle?: (ctx: CtxConsumer<Static<BodySchema>, Static<HeaderSchema>>) => Promise<any>
 }
 
-export class ServerKafka {
+export interface IServerKafka {
+  listen(callback: (err?: Error) => void): Promise<void>
+  close(): Promise<void>
+  consume<Body extends TSchema, Header extends TSchema>(
+    pattern: string,
+    handler: ConsumeHandler<Body, Header>,
+    schema?: TSchemaCtx<Body, Header>
+  ): void
+}
+
+export class ServerKafka implements IServerKafka {
   private client: Kafka | null = null
   private consumer: Consumer | null = null
   private producer: Producer | null = null
