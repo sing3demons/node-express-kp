@@ -60,7 +60,7 @@ type BaseResponse = {
     success: boolean;
 };
 export type MessageHandler<Schema extends SchemaCtx> = (context: KafkaContext<Schema>) => Promise<BaseResponse> | BaseResponse;
-export type ConsumeHandler<B extends TSchema, H extends TSchema> = (ctx: CtxConsumer<Static<B>, Static<H>>) => Promise<BaseResponse> | BaseResponse;
+export type ConsumeHandler<B extends TSchema, H extends TSchema> = (ctx: CtxConsumer<Static<B>, Static<H>>) => Promise<BaseResponse | void> | BaseResponse | void;
 export type TSchemaCtx<BodySchema extends TSchema, HeaderSchema extends TSchema> = {
     body?: BodySchema;
     headers?: HeaderSchema;
@@ -81,7 +81,7 @@ export declare class ServerKafka implements IServerKafka {
     private messageHandlers;
     private schemaHandler;
     constructor(options: ServerKafkaOptions);
-    listen(callback: (err?: Error) => void): Promise<void>;
+    listen(callback?: (err?: Error) => void): Promise<void>;
     close(): Promise<void>;
     private start;
     private createClient;

@@ -76,7 +76,7 @@ export type MessageHandler<Schema extends SchemaCtx> = (
 
 export type ConsumeHandler<B extends TSchema, H extends TSchema> = (
   ctx: CtxConsumer<Static<B>, Static<H>>
-) => Promise<BaseResponse> | BaseResponse
+) => Promise<BaseResponse | void> | BaseResponse | void
 
 type ParsedMessage = {
   topic: string
@@ -133,12 +133,14 @@ export class ServerKafka implements IServerKafka {
     this.groupId = consumerOptions.groupId || this.clientId
   }
 
-  async listen(callback: (err?: Error) => void): Promise<void> {
+  async listen(callback?: (err?: Error) => void): Promise<void> {
     try {
       this.client = this.createClient()
       await this.start(callback)
     } catch (err) {
-      callback(err as Error)
+      if (callback) {
+        callback(err as Error)
+      }
     }
   }
 
@@ -150,7 +152,7 @@ export class ServerKafka implements IServerKafka {
     this.client = null
   }
 
-  private async start(callback: () => void): Promise<void> {
+  private async start(callback?: () => void): Promise<void> {
     const consumerOptions: ConsumerConfig = { ...this.options.consumer, groupId: this.groupId }
     this.consumer = this.client!.consumer(consumerOptions)
     this.producer = this.client!.producer(this.options.producer)
@@ -165,7 +167,9 @@ export class ServerKafka implements IServerKafka {
       await this.close()
     }
 
-    callback()
+    if (callback) {
+      callback()
+    }
   }
 
   private createClient(): Kafka {

@@ -35,7 +35,7 @@ import {
   ServerKafka,
   ServerKafkaOptions,
   TSchemaCtx,
-  IServerKafka
+  IServerKafka,
 } from './kafka'
 
 export {
