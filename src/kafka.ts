@@ -1,103 +1,126 @@
-import {
-  Kafka,
-  KafkaMessage,
-  Consumer,
-  Producer,
-  ConsumerConfig,
-  RetryOptions,
-  KafkaConfig,
-  logLevel,
-  SASLOptions,
-  Mechanism,
-  ProducerConfig,
-} from 'kafkajs'
+import { Kafka, KafkaMessage, Consumer, Producer, RecordMetadata, Message, KafkaConfig, ConsumerConfig } from 'kafkajs'
+import { Static, TObject, TSchema } from '@sinclair/typebox'
+import { TypeCompiler } from '@sinclair/typebox/compiler'
+
+export type CtxConsumer<Body = unknown, Headers = unknown> = {
+  body: Body
+  headers: Headers
+  setHeaders: (headers: Record<string, string>) => void
+  validate: <T>(data: T) => void
+  response: (code: number, data: any) => void
+}
+
+export type SchemaCtxConsumer<Body extends TSchema = TSchema, Header extends TSchema = TSchema> = {
+  body?: Static<Body>
+  headers?: Static<Header>
+}
 
 export type ServerKafkaOptions = {
   client: {
     clientId: string
     brokers: string[]
+    logLevel?: number
+    retry?: {
+      initialRetryTime?: number
+      retries?: number
+    }
+    auth?: {
+      username: string
+      password: string
+    }
   }
-  consumer: {
-    groupId: string
+  consumer?: {
+    groupId?: string
     [key: string]: unknown
   }
-  retry?: {
-    initialRetryTime: number
-    retries: number
-  }
-  producer?: ProducerConfig
+  producer?: Record<string, unknown>
   parser?: unknown
   subscribe?: Record<string, unknown>
   run?: Record<string, unknown>
   send?: Record<string, unknown>
-  postfixId?: string
-  logLevel?: logLevel
-  ssl?: boolean
-  requestTimeout?: number
-  enforceRequestTimeout?: boolean
-  connectionTimeout?: number
-  sasl?: SASLOptions | Mechanism
 }
 
-type KafkaContext = {
+type SchemaCtx = {
+  body?: TSchema
+  query?: TSchema
+  headers?: TSchema
+}
+
+export type KafkaContext<Schema extends SchemaCtx> = {
   topic: string
   partition: number
   headers: KafkaMessage['headers']
-  value: string | null
+  value: string
+  validate: <T>(data: T) => void
+  sendMessage: (
+    topic: string,
+    payload: any
+  ) => Promise<{
+    err: boolean
+    result_desc: string
+    result_data: never[] | RecordMetadata[]
+  }>
+  body: Schema['body'] extends TObject ? Static<Schema['body']> : Record<string, any>
 }
 
-type MessageHandler<T = any> = (data: unknown, context: KafkaContext) => Promise<T>
+type BaseResponse = {
+  topic?: string
+  status?: number
+  data?: unknown
+  success: boolean
+}
+
+export type MessageHandler<Schema extends SchemaCtx> = (
+  context: KafkaContext<Schema>
+) => Promise<BaseResponse> | BaseResponse
+
+export type ConsumeHandler<B extends TSchema, H extends TSchema> = (
+  ctx: CtxConsumer<Static<B>, Static<H>>
+) => Promise<BaseResponse> | BaseResponse
 
 type ParsedMessage = {
   topic: string
   partition: number
   headers: KafkaMessage['headers']
-  value: string | null
+  value: string
+  body: Record<string, TSchema>
 }
 
-type KafkaMessageHandler = {
-  topic: string
-  partition: number
-  message: KafkaMessage
-  heartbeat: () => Promise<void>
+class ServerKafkaError extends Error {
+  topic?: string
+  payload?: any
+
+  constructor({ message, topic, payload }: { message: string; topic?: string; payload?: any }) {
+    super(message)
+    this.name = 'ServerKafkaError'
+    this.topic = topic
+    this.payload = payload
+  }
+}
+
+export type TSchemaCtx<BodySchema extends TSchema, HeaderSchema extends TSchema> = {
+  body?: BodySchema
+  headers?: HeaderSchema
+  beforeHandle?: (ctx: CtxConsumer<Static<BodySchema>, Static<HeaderSchema>>) => Promise<any>
 }
 
 export class ServerKafka {
-  private logger: any
   private client: Kafka | null = null
   private consumer: Consumer | null = null
   private producer: Producer | null = null
-  private brokers: string[]
-  private clientId: string
+
+  private clientId?: string
   private groupId: string
   private options: ServerKafkaOptions
-  private messageHandlers: Map<string, MessageHandler> = new Map()
-  private retry: RetryOptions
-
-  private logLevel?: logLevel
-  private ssl?: boolean
-  private requestTimeout?: number
-  private enforceRequestTimeout?: boolean
-  private connectionTimeout?: number
-  private sasl?: SASLOptions | Mechanism
+  private messageHandlers = new Map()
+  private schemaHandler = new Map<string, TSchemaCtx<TSchema, TSchema>>()
 
   constructor(options: ServerKafkaOptions) {
     this.options = options
-    this.logger = console
     const clientOptions = options.client || {}
     const consumerOptions = options.consumer || {}
-
-    this.brokers = clientOptions.brokers
     this.clientId = clientOptions.clientId
-    this.groupId = consumerOptions.groupId
-    this.retry = options.retry || { initialRetryTime: 100, retries: 8 }
-
-    this.logLevel = options.logLevel
-    this.ssl = options.ssl
-    this.requestTimeout = options.requestTimeout
-    this.enforceRequestTimeout = options.enforceRequestTimeout
-    this.connectionTimeout = options.connectionTimeout
-    this.sasl = options.sasl
+    this.groupId = consumerOptions.groupId || this.clientId
   }
 
   async listen(callback: (err?: Error) => void): Promise<void> {
@@ -122,39 +145,38 @@ export class ServerKafka {
     this.consumer = this.client!.consumer(consumerOptions)
     this.producer = this.client!.producer(this.options.producer)
 
-    await this.consumer.connect()
-    await this.producer.connect()
-    await this.bindEvents(this.consumer)
+    try {
+      await this.consumer.connect()
+      await this.producer.connect()
+
+      await this.bindEvents(this.consumer)
+    } catch (error) {
+      console.error('Failed to connect to Kafka', error)
+      await this.close()
+    }
 
     callback()
   }
 
   private createClient(): Kafka {
     const config: KafkaConfig = {
-      brokers: this.brokers,
+      ...this.options.client,
+      brokers: this.options.client.brokers,
       clientId: this.clientId,
-      retry: this.retry,
+      logLevel: this.options.client?.logLevel || 1,
+      retry: {
+        initialRetryTime: this.options.client?.retry?.initialRetryTime || 300,
+        retries: this.options.client?.retry?.retries || 8,
+      },
     }
 
-    if (this.logLevel) {
-      config.logLevel = this.logLevel
+    if (this.options.client?.auth) {
+      config.sasl = {
+        mechanism: 'plain',
+        username: this.options.client.auth.username,
+        password: this.options.client.auth.password,
+      }
     }
-
-    if (this.ssl) {
-      config.ssl = this.ssl
-    }
-
-    if (this.enforceRequestTimeout) {
-      config.enforceRequestTimeout = this.enforceRequestTimeout
-    }
-    if (this.connectionTimeout) {
-      config.connectionTimeout = this.connectionTimeout
-    }
-    if (this.sasl) {
-      config.sasl = this.sasl
-    }
-
-    config.requestTimeout = this.requestTimeout || 30000
 
     return new Kafka(config)
   }
@@ -189,68 +211,165 @@ export class ServerKafka {
     }
   }
 
-  private parser({ topic, message, partition }: KafkaMessageHandler) {
-    return { topic, partition: partition, headers: message.headers, value: message.value?.toString() || '' }
+  private async handleMessage(payload: {
+    topic: string
+    partition: number
+    message: KafkaMessage
+    heartbeat: () => Promise<void>
+  }): Promise<void> {
+    try {
+      const { topic, message } = payload
+
+      for (const key in message?.headers) {
+        if (Object.prototype.hasOwnProperty.call(message.headers, key)) {
+          const element = message.headers[key]
+          if (element instanceof Buffer) {
+            message.headers[key] = element.toString()
+          }
+        }
+      }
+
+      const beforeHandle = this.schemaHandler.get(topic)?.beforeHandle
+      const rawMessage: ParsedMessage = {
+        topic,
+        partition: payload.partition,
+        headers: message.headers,
+        value: message.value?.toString() || '',
+        body: JSON.parse(message.value?.toString() || ''),
+      }
+
+      const handler = this.getHandlerByPattern(rawMessage.topic)
+
+      if (!handler) {
+        return
+      }
+
+      const schemaCtx = this.schemaHandler.get(topic) || {}
+
+      const kafkaContext: KafkaContext<typeof schemaCtx> = {
+        ...rawMessage,
+        validate: (data) => this.validate(topic, data, rawMessage),
+        sendMessage: async <T>(topic: string, payload: T) => await this.sendMessage(topic, payload),
+        body: rawMessage.body,
+      }
+
+      if (beforeHandle) {
+        await beforeHandle(kafkaContext as unknown as CtxConsumer)
+      }
+
+      const response = await handler(kafkaContext)
+
+      if (response.topic && response.data) {
+        await this.sendMessage(response.topic, response.data)
+      }
+    } catch (error) {
+      console.error('Failed to handle message', error)
+    }
   }
-
-  private async handleMessage(payload: KafkaMessageHandler): Promise<void> {
-    const { topic, partition } = payload
-
-    const rawMessage: ParsedMessage = this.parser(payload)
-
-    this.logger.debug('Parsed message:', rawMessage)
-
-    if (!rawMessage?.topic) {
-      this.logger.error(`No pattern found in message for topic: ${topic}`, rawMessage)
-      return
+  private validate = <T>(topic: string, data: T, rawMessage: ParsedMessage) => {
+    const schema = this.schemaHandler.get(topic)
+    if (schema?.body) {
+      const typeCheck = TypeCompiler.Compile(schema.body as TSchema)
+      if (!typeCheck.Check(data)) {
+        const first = typeCheck.Errors(data).First()
+        throw new ServerKafkaError({
+          message: 'Invalid schema',
+          topic: topic,
+          payload: first,
+        })
+      }
     }
 
-    const kafkaContext: KafkaContext = {
-      ...rawMessage,
-      partition: partition,
-      topic,
-    }
-
-    const handler = this.getHandlerByPattern(rawMessage.topic)
-
-    if (!handler) {
-      this.logger.error(`No handler registered for pattern: ${rawMessage.topic}`)
-      return
-    }
-
-    const response = await handler(rawMessage.value, kafkaContext)
-
-    if (response) {
-      // reply_topic
-      if (response['reply-topic']) {
-        await this.sendMessage({ response }, response['reply-topic'])
+    if (schema?.headers) {
+      const typeCheck = TypeCompiler.Compile(schema.headers as TSchema)
+      if (!typeCheck.Check(rawMessage.headers)) {
+        const first = typeCheck.Errors(rawMessage.headers).First()
+        throw new ServerKafkaError({
+          message: 'Invalid schema',
+          topic: topic,
+          payload: first,
+        })
       }
     }
   }
 
-  parse(message: KafkaMessage): { pattern: string; data: unknown } | {} {
+  private async sendMessage(topic: string, payload: any) {
+    let producer = this.producer
+    if (!producer) {
+      producer = this.client?.producer(this.options.producer) ?? null
+    }
+
+    if (!producer) {
+      return {
+        err: true,
+        result_desc: 'Failed to connect to Kafka',
+        result_data: [],
+      }
+    }
+
+    const messages: Message[] = []
+
+    if (typeof payload === 'object') {
+      if (Array.isArray(payload)) {
+        payload.forEach((msg) => {
+          messages.push({ value: JSON.stringify(msg) })
+        })
+      } else {
+        messages.push({ value: JSON.stringify(payload) })
+      }
+    } else {
+      messages.push({ value: payload })
+    }
+
     try {
-      const value = message.value?.toString()
-      return value ? JSON.parse(value) : {}
-    } catch (err) {
-      console.error('Failed to parse message', err)
-      return {}
+      await producer.connect()
+      const recordMetadata = await producer.send({
+        topic,
+        messages: messages.map((msg) => {
+          try {
+            return JSON.parse(String(msg))
+          } catch (error) {
+            return msg
+          }
+        }),
+      })
+
+      const result = {
+        err: false,
+        result_desc: 'success',
+        result_data: recordMetadata,
+      }
+
+      return result
+    } catch (error) {
+      const result = {
+        err: true,
+        result_desc: 'Failed to send message',
+        result_data: [],
+      }
+
+      if (error instanceof Error) {
+        result.result_desc = error.message
+      }
+
+      return result
+    } finally {
+      await producer.disconnect()
     }
   }
 
-  private async sendMessage(message: any, replyTopic: string): Promise<void> {
-    const outgoingMessage = { ...message.response }
-    await this.producer!.send({
-      topic: replyTopic,
-      messages: [outgoingMessage],
-    })
-  }
-
-  private getHandlerByPattern(pattern: string): MessageHandler | undefined {
+  private getHandlerByPattern(pattern: string): MessageHandler<any> | undefined {
     return this.messageHandlers.get(pattern)
   }
 
-  public consume(pattern: string, handler: MessageHandler): void {
+  public consume<Body extends TSchema, Header extends TSchema>(
+    pattern: string,
+    handler: ConsumeHandler<Body, Header>,
+    schema?: TSchemaCtx<Body, Header>
+  ): void {
     this.messageHandlers.set(pattern, handler)
+    if (schema) {
+      this.schemaHandler.set(pattern, schema as unknown as TSchemaCtx<TSchema, TSchema>)
+    }
   }
 }

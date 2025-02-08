@@ -26,7 +26,16 @@ import {
   statusMap,
 } from './context'
 import { default as HttpService, ApiResponse, HttpOption, IHttpService } from './http-service'
-import { ServerKafka, ServerKafkaOptions } from './kafka'
+import {
+  ConsumeHandler,
+  CtxConsumer,
+  KafkaContext,
+  MessageHandler,
+  SchemaCtxConsumer,
+  ServerKafka,
+  ServerKafkaOptions,
+  TSchemaCtx,
+} from './kafka'
 
 export {
   AppRouter,
@@ -68,6 +77,12 @@ export {
   Application,
   ServerKafka,
   ServerKafkaOptions,
+  KafkaContext,
+  CtxConsumer,
+  SchemaCtxConsumer,
+  TSchemaCtx,
+  ConsumeHandler,
+  MessageHandler,
 }
 
 export default AppServer
