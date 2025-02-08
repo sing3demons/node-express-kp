@@ -66,3 +66,5 @@ export {
   express,
   Application,
 }
+
+export default AppServer
