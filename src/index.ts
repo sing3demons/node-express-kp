@@ -26,6 +26,7 @@ import {
   statusMap,
 } from './context'
 import { default as HttpService, ApiResponse, HttpOption, IHttpService } from './http-service'
+import { ServerKafka, ServerKafkaOptions } from './kafka'
 
 export {
   AppRouter,
@@ -65,6 +66,8 @@ export {
   HttpService,
   express,
   Application,
+  ServerKafka,
+  ServerKafkaOptions,
 }
 
 export default AppServer
