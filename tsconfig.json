@@ -21,7 +21,9 @@
     "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "typeRoots": ["src/typings", "./node_modules/@types/"]
+    "typeRoots": ["src/typings", "./node_modules/@types/"],
+    "noErrorTruncation": true,
+    "maxNodeModuleJsDepth": 2
   },
   "include": ["src/**/*"],
   "exclude": ["**/*.spec.ts", "**/*.test.ts"]

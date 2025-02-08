@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { type Application } from 'express';
 import { CtxSchema, InternalRoute, InlineHandler, MiddlewareRoute, ContainsWhitespace, CustomHandler, CustomRouteDefinition } from './context';
 import http from 'http';

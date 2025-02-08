@@ -61,6 +61,15 @@ type BaseResponse = {
 };
 export type MessageHandler<Schema extends SchemaCtx> = (context: KafkaContext<Schema>) => Promise<BaseResponse> | BaseResponse;
 export type ConsumeHandler<B extends TSchema, H extends TSchema> = (ctx: CtxConsumer<Static<B>, Static<H>>) => Promise<BaseResponse | void> | BaseResponse | void;
+export declare class ServerKafkaError extends Error {
+    topic?: string;
+    payload?: any;
+    constructor({ message, topic, payload }: {
+        message: string;
+        topic?: string;
+        payload?: any;
+    });
+}
 export type TSchemaCtx<BodySchema extends TSchema, HeaderSchema extends TSchema> = {
     body?: BodySchema;
     headers?: HeaderSchema;

@@ -86,7 +86,7 @@ type ParsedMessage = {
   body: Record<string, TSchema>
 }
 
-class ServerKafkaError extends Error {
+export class ServerKafkaError extends Error {
   topic?: string
   payload?: any
 
