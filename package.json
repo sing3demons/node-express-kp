@@ -1,7 +1,6 @@
 {
   "name": "@sing3demons/node-express-kp",
   "version": "1.0.11",
-  "type": "module",
   "main": "lib/index.js",
   "module": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -15,7 +14,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sing3demons/express-zod.git"
+    "url": "git+https://github.com/sing3demons/node-express-kp.git"
   },
   "publishConfig": {
     "@sing3demons:registry": "https://npm.pkg.github.com/"
