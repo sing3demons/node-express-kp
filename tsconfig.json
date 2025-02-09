@@ -1,30 +1,25 @@
 {
   "compilerOptions": {
-    "lib": ["ESNext"],
-    "target": "ES6",
+    "target": "es2016" /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */,
+    "module": "commonjs" /* Specify what module code is generated. */,
+    "rootDir": "./src" /* Specify the root folder within your source files. */,
     "outDir": "lib",
-    "removeComments": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "module": "ESNext",
-    "rootDir": "./src",
-    "moduleResolution": "node",
-    "allowJs": true,
-    "strict": true,
-    "declaration": true,
+    "esModuleInterop": true /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */,
+    "forceConsistentCasingInFileNames": true /* Ensure that casing is correct in imports. */,
+    /* Type Checking */
+    "strict": true /* Enable all strict type-checking options. */,
+    "noImplicitAny": true /* Enable error reporting for expressions and declarations with an implied 'any' type. */,
     "skipLibCheck": true,
-    "alwaysStrict": true,
-    "strictNullChecks": true,
-    "allowUnreachableCode": false,
-    "noImplicitAny": true,
-    "noImplicitReturns": true,
-    "noUncheckedIndexedAccess": true,
-    "noUnusedLocals": true,
+    "removeComments": true,
+    "moduleResolution": "node",
+
+
     "noUnusedParameters": true,
+    "declaration": true,
     "typeRoots": ["src/typings", "./node_modules/@types/"],
-    "noErrorTruncation": true,
-    "maxNodeModuleJsDepth": 2
+
+
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*.ts"],
   "exclude": ["**/*.spec.ts", "**/*.test.ts"]
 }
