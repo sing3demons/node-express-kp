@@ -184,7 +184,68 @@ export declare const statusMap: {
     readonly 'Not Extended': 510;
     readonly 'Network Authentication Required': 511;
 };
-export declare const InvertedStatusMap: { [K in keyof StatusMap as StatusMap[K]]: K; };
+export declare const InvertedStatusMap: {
+    readonly 100: "Continue";
+    readonly 101: "Switching Protocols";
+    readonly 102: "Processing";
+    readonly 103: "Early Hints";
+    readonly 200: "OK";
+    readonly 201: "Created";
+    readonly 202: "Accepted";
+    readonly 203: "Non-Authoritative Information";
+    readonly 204: "No Content" | "NoContent";
+    readonly 205: "Reset Content";
+    readonly 206: "Partial Content";
+    readonly 207: "Multi-Status";
+    readonly 208: "Already Reported";
+    readonly 300: "Multiple Choices";
+    readonly 301: "Moved Permanently";
+    readonly 302: "Found";
+    readonly 303: "See Other";
+    readonly 304: "Not Modified";
+    readonly 307: "Temporary Redirect";
+    readonly 308: "Permanent Redirect";
+    readonly 400: "Bad Request" | "BadRequest";
+    readonly 401: "Unauthorized";
+    readonly 402: "Payment Required";
+    readonly 403: "Forbidden";
+    readonly 404: "Not Found" | "NotFound";
+    readonly 405: "Method Not Allowed" | "MethodNotAllowed";
+    readonly 406: "Not Acceptable";
+    readonly 407: "Proxy Authentication Required";
+    readonly 408: "Request Timeout" | "RequestTimeout";
+    readonly 409: "Conflict";
+    readonly 410: "Gone";
+    readonly 411: "Length Required";
+    readonly 412: "Precondition Failed";
+    readonly 413: "Payload Too Large";
+    readonly 414: "URI Too Long";
+    readonly 415: "Unsupported Media Type";
+    readonly 416: "Range Not Satisfiable";
+    readonly 417: "Expectation Failed";
+    readonly 418: "I'm a teapot";
+    readonly 421: "Misdirected Request";
+    readonly 422: "Unprocessable Content" | "UnprocessableEntity";
+    readonly 423: "Locked";
+    readonly 424: "Failed Dependency";
+    readonly 425: "Too Early";
+    readonly 426: "Upgrade Required";
+    readonly 428: "Precondition Required";
+    readonly 429: "Too Many Requests" | "TooManyRequests";
+    readonly 431: "Request Header Fields Too Large";
+    readonly 451: "Unavailable For Legal Reasons";
+    readonly 500: "Internal Server Error" | "InternalServerError";
+    readonly 501: "Not Implemented";
+    readonly 502: "Bad Gateway" | "BadGateway";
+    readonly 503: "Service Unavailable" | "ServiceUnavailable";
+    readonly 504: "Gateway Timeout";
+    readonly 505: "HTTP Version Not Supported";
+    readonly 506: "Variant Also Negotiates";
+    readonly 507: "Insufficient Storage";
+    readonly 508: "Loop Detected";
+    readonly 510: "Not Extended";
+    readonly 511: "Network Authentication Required";
+};
 export type StatusMap = typeof statusMap;
 export type InvertedStatusMap = typeof InvertedStatusMap;
 export interface CookieOptions {
@@ -209,6 +270,7 @@ export type Context<Route extends CtxSchema = {}, Path extends string | undefine
     params: undefined extends Route['params'] ? undefined extends Path ? Record<string, string> : Path extends `${string}/${':' | '*'}${string}` ? ResolvePath<Path> : never : Route['params'] extends TObject ? Static<Route['params']> : never;
     headers: undefined extends Route['headers'] ? Record<string, string | undefined> : Route['headers'] extends TObject ? Static<Route['headers']> : never;
     redirect: Redirect;
+    validate<T extends TObject>(schema: T, data: unknown): ValidationResult<Static<T>>;
     set: {
         headers: HTTPHeaders;
         status?: number | keyof StatusMap;
@@ -219,6 +281,11 @@ export type Context<Route extends CtxSchema = {}, Path extends string | undefine
     path: string;
     route: string;
 }>;
+export interface ValidationResult<T> {
+    err: boolean;
+    description: string;
+    value: T;
+}
 export type Ctx<Route extends CtxSchema = {}> = Prettify<{
     body: undefined extends Route['body'] ? Record<string, unknown> : Route['body'] extends TObject ? Static<Route['body']> : never;
     query: undefined extends Route['query'] ? Record<string, string | undefined> : Route['query'] extends TObject ? Static<Route['query']> : never;
@@ -231,6 +298,7 @@ export type Ctx<Route extends CtxSchema = {}> = Prettify<{
         redirect?: string;
         cookie?: Record<string, any>;
     };
+    validate<T extends TObject>(schema: T, data: unknown): ValidationResult<Static<T>>;
     response(status: number | keyof StatusMap, body: undefined extends Route['response'] ? unknown : Route['response'][keyof Route['response']], headers?: HTTPHeaders): void;
     path: string;
     route: string;

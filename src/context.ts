@@ -362,6 +362,8 @@ export type Context<Route extends CtxSchema = {}, Path extends string | undefine
 
   redirect: Redirect
 
+  validate<T extends TObject>(schema: T, data: unknown): ValidationResult<Static<T>>
+
   set: {
     headers: HTTPHeaders
     status?: number | keyof StatusMap
@@ -378,6 +380,12 @@ export type Context<Route extends CtxSchema = {}, Path extends string | undefine
   path: string
   route: string
 }>
+
+export interface ValidationResult<T> {
+  err: boolean
+  description: string
+  value: T
+}
 
 export type Ctx<Route extends CtxSchema = {}> = Prettify<{
   body: undefined extends Route['body']
@@ -412,6 +420,8 @@ export type Ctx<Route extends CtxSchema = {}> = Prettify<{
     redirect?: string
     cookie?: Record<string, any>
   }
+
+  validate<T extends TObject>(schema: T, data: unknown): ValidationResult<Static<T>>
 
   response(
     status: number | keyof StatusMap,

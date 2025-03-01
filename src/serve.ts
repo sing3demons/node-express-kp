@@ -9,8 +9,10 @@ import {
   ContainsWhitespace,
   CustomHandler,
   CustomRouteDefinition,
+  ValidationResult,
 } from './context'
-import { TObject } from '@sinclair/typebox'
+import { Static, TObject } from '@sinclair/typebox'
+import { Value } from '@sinclair/typebox/value'
 import { v4, v7 } from 'uuid'
 import { TypeCompiler } from '@sinclair/typebox/compiler'
 import cookieParser from 'cookie-parser'
@@ -238,7 +240,7 @@ export default class AppServer extends AppRouter {
   }
 
   private createContext(req: Request, res: Response) {
-    const contest = {
+    const context = {
       body: req.body,
       headers: req.headers,
       params: req.params,
@@ -250,6 +252,40 @@ export default class AppServer extends AppRouter {
 
         res.status(code).send(data)
       },
+      validate<T extends TObject>(schema: T, data: unknown): ValidationResult<Static<T>> {
+        try {
+          const C = TypeCompiler.Compile(schema)
+          const isValid = C.Check(data)
+          if (!isValid) {
+            const description = [...Value.Errors(schema, data)].map((err) => err.message).join(', ')
+            return {
+              err: true,
+              description,
+              value: {},
+            }
+          }
+
+          return {
+            err: false,
+            description: 'success',
+            value: data,
+          }
+        } catch (error) {
+          if (error instanceof Error) {
+            return {
+              err: true,
+              description: error.message,
+              value: {},
+            }
+          }
+
+          return {
+            err: true,
+            description: 'unknown_error',
+            value: {},
+          }
+        }
+      },
       set: {
         headers: undefined as Record<string, string> | undefined,
         status: 200,
@@ -257,7 +293,7 @@ export default class AppServer extends AppRouter {
       },
     }
 
-    return contest
+    return context
   }
 
   public register(): Application {
